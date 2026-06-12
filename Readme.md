@@ -1,9 +1,94 @@
-# OS2 Project 
+# OS2 Project
 
-to run this project , we only need to run the docker-compose file and nothing more . 
+This repository runs the full university project stack with Docker Compose:
 
->**NOTES**: 
-- the server name is os2.com and it's connected to local host so both os2.com and localhost will work just fine 
-- it only serves on https on port 443 so no need to add port 8080 or stuff like that for the system . 
-- the containers are connected to each others , so they will not work until the other one is working making the wake up time harder 
-- for the webapp to fully work , add the os2.com to hosts and bind it to 127.0.0.1 
+- two e-commerce Spring Boot containers from the DockerHub image `birobyte1110/java-app:docker`
+- PostgreSQL, Redis, and RabbitMQ for the e-commerce backend
+- Apache HTTPS reverse proxy and load balancer
+- AI log classifier that reads Apache access/error logs
+- Prometheus, Apache exporter, cAdvisor, and Grafana dashboards
+- optional traffic generator for demo/testing
+
+The e-commerce source is kept in the `e-commerce` submodule for review, but the running stack uses the DockerHub image.
+
+## Run
+
+```powershell
+docker compose up -d
+```
+
+The Spring Boot containers can take around 2 to 3 minutes to finish startup. Apache may return `503` until `app1` and `app2` are ready.
+
+## URLs
+
+- E-commerce API through Apache: `https://localhost`
+- E-commerce API with project hostname: `https://os2.com`
+- Prometheus direct: `http://localhost:9090`
+- Prometheus through Apache: `https://prom.os2.com`
+- Grafana direct: `http://localhost:3000`
+- Grafana through Apache: `https://grafana.os2.com`
+- AI classifier metrics: `http://localhost:8000/metrics`
+- Apache exporter metrics: `http://localhost:9117/metrics`
+- cAdvisor metrics: `http://localhost:8082/metrics`
+
+Grafana default login:
+
+```text
+admin / admin123
+```
+
+To use the hostnames, add these entries to your hosts file:
+
+```text
+127.0.0.1 os2.com
+127.0.0.1 prom.os2.com
+127.0.0.1 grafana.os2.com
+```
+
+## Demo Traffic
+
+Run a full demo load:
+
+```powershell
+docker compose --profile demo run --rm traffic-generator
+```
+
+Run a shorter smoke demo:
+
+```powershell
+docker compose --profile demo run --rm -e DURATION_SECONDS=20 -e CONCURRENCY=30 traffic-generator
+```
+
+The generator creates normal API traffic, unauthenticated/auth-forbidden requests, SQLi/XSS-looking requests, and burst traffic. Apache applies a demo rate-limit hook to the generator traffic and returns `429 Too Many Requests` once the short-window threshold is exceeded. These requests are written to the shared Apache logs, classified by the AI classifier, and exposed to Prometheus/Grafana.
+
+## Verification
+
+```powershell
+docker compose ps
+curl.exe -k https://localhost/actuator/health
+curl.exe http://localhost:9090/-/ready
+curl.exe http://localhost:3000/api/health
+curl.exe http://localhost:8000/metrics
+```
+
+Prometheus should show these active targets as `up`:
+
+- `spring-cluster`: `app1:8080`, `app2:8080`
+- `ai_classifier`: `ai-classifier:8000`
+- `apache`: `apache-exporter:9117`
+- `cadvisor`: `cadvisor:8080`
+- `prometheus`: `prometheus:9090`
+
+Grafana provisions four dashboards under the `OS2` folder:
+
+- AI Log Classifier
+- Apache Observability
+- Container Observability
+- Ecommerce Observability
+
+## Notes
+
+- Mail credentials are optional. If `SPRING_MAIL_USERNAME` and `SPRING_MAIL_PASSWORD` are not set, Compose will warn and pass blank values.
+- The stack uses a self-signed certificate from `apache/server.crt` and `apache/server.key`, so browser/curl TLS warnings are expected.
+- The optional traffic generator is not started by normal `docker compose up -d` because it is behind the `demo` profile.
+- The Apache rate-limit demo uses `apache/rate_limit.lua` through `mod_lua`; it only applies to the traffic generator user agent so normal manual API testing is not throttled.

@@ -68,9 +68,20 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: pass
+      SPRING_CACHE_TYPE: redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      MANAGEMENT_HEALTH_REDIS_ENABLED: "true"
+      APP_INVENTORY_LOCK_TYPE: redis
+      APP_CAPACITY_MAX_CONCURRENT_REQUESTS: 10
+      APP_CAPACITY_MAX_WAIT_MS: 50
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     expose:
       - "8080"
     networks:
@@ -95,9 +106,20 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: pass
+      SPRING_CACHE_TYPE: redis
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      MANAGEMENT_HEALTH_REDIS_ENABLED: "true"
+      APP_INVENTORY_LOCK_TYPE: redis
+      APP_CAPACITY_MAX_CONCURRENT_REQUESTS: 10
+      APP_CAPACITY_MAX_WAIT_MS: 50
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     expose:
       - "8080"
     networks:
@@ -132,6 +154,22 @@ services:
     networks:
       - backend
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    privileged: true
+    ports:
+      - "8082:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks:
+      - backend
+    restart: unless-stopped
+
 
   ai-classifier:
     build: ./ai-classifier
@@ -163,6 +201,7 @@ services:
     depends_on:
       - ai-classifier
       - apache-exporter
+      - cadvisor
     networks:
       - backend
     restart: unless-stopped
@@ -178,14 +217,29 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./docker/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
-      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
     networks:
       - backend
     restart: unless-stopped
+
+  traffic-generator:
+    build: ./traffic-generator
+    container_name: traffic-generator
+    profiles:
+      - demo
+    environment:
+      TARGET_URL: https://apache
+      CONCURRENCY: 80
+      DURATION_SECONDS: 120
+      VERIFY_TLS: "false"
+    depends_on:
+      - apache
+    networks:
+      - backend
 
 volumes:
   postgres-data:
