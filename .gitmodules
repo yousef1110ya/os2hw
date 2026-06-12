@@ -1,0 +1,4 @@
+[submodule "e-commerce"]
+	path = e-commerce
+	url = https://github.com/OmarAlmasri/parallel-development.git
+	branch = docker
