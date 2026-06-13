@@ -75,6 +75,9 @@ services:
       APP_INVENTORY_LOCK_TYPE: redis
       APP_CAPACITY_MAX_CONCURRENT_REQUESTS: 10
       APP_CAPACITY_MAX_WAIT_MS: 50
+      APP_REQUEST_AUDIT_ENABLED: "true"
+      APP_REQUEST_AUDIT_PATH: /shared-logs/request-audit.log
+      APP_REQUEST_AUDIT_MAX_BODY_BYTES: 8192
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,6 +87,8 @@ services:
         condition: service_started
     expose:
       - "8080"
+    volumes:
+      - apache_logs:/shared-logs
     networks:
       - backend
     restart: unless-stopped
@@ -113,6 +118,9 @@ services:
       APP_INVENTORY_LOCK_TYPE: redis
       APP_CAPACITY_MAX_CONCURRENT_REQUESTS: 10
       APP_CAPACITY_MAX_WAIT_MS: 50
+      APP_REQUEST_AUDIT_ENABLED: "true"
+      APP_REQUEST_AUDIT_PATH: /shared-logs/request-audit.log
+      APP_REQUEST_AUDIT_MAX_BODY_BYTES: 8192
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,6 +130,8 @@ services:
         condition: service_started
     expose:
       - "8080"
+    volumes:
+      - apache_logs:/shared-logs
     networks:
       - backend
     restart: unless-stopped
@@ -176,6 +186,8 @@ services:
     container_name: ai-classifier
     depends_on:
       - apache
+    environment:
+      REQUEST_AUDIT_LOG_PATH: /shared-logs/request-audit.log
     volumes:
       - apache_logs:/shared-logs
     ports:

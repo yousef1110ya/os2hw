@@ -158,6 +158,22 @@ def run_seed_traffic(token):
         ("GET", "/api/users", auth_headers(token), None),
         ("GET", f"/api/products?q={encoded_sqli}", {}, None),
         ("GET", f"/api/products?q={encoded_xss}", {}, None),
+        (
+            "PUT",
+            "/api/users/me",
+            auth_headers(token),
+            {
+                "name": "' OR 1=1--"
+            }
+        ),
+        (
+            "PUT",
+            "/api/users/me",
+            auth_headers(token),
+            {
+                "name": "<script>alert(1)</script>"
+            }
+        ),
     ]
 
     for method, path, headers, payload in requests_to_send:

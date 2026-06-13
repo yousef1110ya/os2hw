@@ -5,7 +5,7 @@ This repository runs the full university project stack with Docker Compose:
 - two e-commerce Spring Boot containers from the DockerHub image `birobyte1110/java-app:docker`
 - PostgreSQL, Redis, and RabbitMQ for the e-commerce backend
 - Apache HTTPS reverse proxy and load balancer
-- AI log classifier that reads Apache access/error logs
+- AI log classifier that reads Apache access/error logs and app request-body audit logs
 - Prometheus, Apache exporter, cAdvisor, and Grafana dashboards
 - optional traffic generator for demo/testing
 
@@ -61,6 +61,14 @@ docker compose --profile demo run --rm -e DURATION_SECONDS=20 -e CONCURRENCY=30 
 
 The generator creates normal API traffic, unauthenticated/auth-forbidden requests, SQLi/XSS-looking requests, and burst traffic. Apache applies a demo rate-limit hook to the generator traffic and returns `429 Too Many Requests` once the short-window threshold is exceeded. These requests are written to the shared Apache logs, classified by the AI classifier, and exposed to Prometheus/Grafana.
 
+The generator also sends JSON-body SQLi/XSS attempts through `PUT /api/users/me`. The e-commerce app writes sanitized request-body audit events to:
+
+```text
+/shared-logs/request-audit.log
+```
+
+Sensitive fields such as `password`, `token`, `secret`, `apiKey`, and `Authorization` are masked before they are written.
+
 ## Verification
 
 ```powershell
@@ -92,3 +100,42 @@ Grafana provisions four dashboards under the `OS2` folder:
 - The stack uses a self-signed certificate from `apache/server.crt` and `apache/server.key`, so browser/curl TLS warnings are expected.
 - The optional traffic generator is not started by normal `docker compose up -d` because it is behind the `demo` profile.
 - The Apache rate-limit demo uses `apache/rate_limit.lua` through `mod_lua`; it only applies to the traffic generator user agent so normal manual API testing is not throttled.
+- Request-body audit logging is implemented in the e-commerce app image. After changing the e-commerce source, rebuild and push the DockerHub `docker` branch image before expecting another machine to pick up the new behavior through this root Compose stack.
+
+## Manual Body Injection Tests
+
+After registering/logging in and getting a bearer token, send these through Apache:
+
+```text
+PUT https://localhost/api/users/me
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "' OR 1=1--"
+}
+```
+
+```text
+PUT https://localhost/api/users/me
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "name": "<script>alert(1)</script>"
+}
+```
+
+Then check:
+
+```text
+http://localhost:8000/metrics
+```
+
+Expected counters:
+
+```text
+log_detections_total{type="sqli"}
+log_detections_total{type="xss"}
+log_detections_total{type="suspicious"}
+```
