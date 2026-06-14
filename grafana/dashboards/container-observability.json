@@ -55,8 +55,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\",image!=\"\",name!=\"\"}[5m]))",
-          "legendFormat": "{{name}}",
+          "expr": "sum by (container) (rate(container_cpu_usage_seconds_total{job=\"alloy-cadvisor\",image!=\"\",container!=\"\"}[5m]))",
+          "legendFormat": "{{container}}",
           "range": true,
           "refId": "A"
         }
@@ -98,8 +98,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum by (name) (container_memory_working_set_bytes{job=\"cadvisor\",image!=\"\",name!=\"\"})",
-          "legendFormat": "{{name}}",
+          "expr": "sum by (container) (container_memory_working_set_bytes{job=\"alloy-cadvisor\",image!=\"\",container!=\"\"})",
+          "legendFormat": "{{container}}",
           "range": true,
           "refId": "A"
         }
@@ -145,13 +145,13 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "up{job=\"cadvisor\"}",
-          "legendFormat": "cadvisor",
+          "expr": "max(up{job=\"alloy-cadvisor\"})",
+          "legendFormat": "alloy-cadvisor",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "cAdvisor Up",
+      "title": "Alloy cAdvisor Scrape Up",
       "type": "stat"
     }
   ],
@@ -173,6 +173,6 @@
   "timezone": "",
   "title": "Container Observability",
   "uid": "container-observability",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

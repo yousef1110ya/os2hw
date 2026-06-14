@@ -6,7 +6,7 @@ This repository runs the full university project stack with Docker Compose:
 - PostgreSQL, Redis, and RabbitMQ for the e-commerce backend
 - Apache HTTPS reverse proxy and load balancer
 - AI log classifier that reads Apache access/error logs and app request-body audit logs
-- Prometheus, Apache exporter, cAdvisor, and Grafana dashboards
+- Prometheus, Apache exporter, Grafana Alloy container metrics, and Grafana dashboards
 - optional traffic generator for demo/testing
 
 The e-commerce source is kept in the `e-commerce` submodule for review, but the running stack uses the DockerHub image.
@@ -29,7 +29,7 @@ The Spring Boot containers can take around 2 to 3 minutes to finish startup. Apa
 - Grafana through Apache: `https://grafana.os2.com`
 - AI classifier metrics: `http://localhost:8000/metrics`
 - Apache exporter metrics: `http://localhost:9117/metrics`
-- cAdvisor metrics: `http://localhost:8082/metrics`
+- Alloy UI/metrics: `http://localhost:12345`
 
 Grafana default login:
 
@@ -84,8 +84,20 @@ Prometheus should show these active targets as `up`:
 - `spring-cluster`: `app1:8080`, `app2:8080`
 - `ai_classifier`: `ai-classifier:8000`
 - `apache`: `apache-exporter:9117`
-- `cadvisor`: `cadvisor:8080`
+- `alloy`: `alloy:12345`
 - `prometheus`: `prometheus:9090`
+
+Container CPU and memory metrics are written into Prometheus by Alloy with:
+
+```text
+job="alloy-cadvisor"
+```
+
+If Docker is installed through Snap on Ubuntu, set the Docker root directory before starting the stack:
+
+```bash
+export DOCKER_ROOT_DIR=/var/snap/docker/common/var-lib-docker
+```
 
 Grafana provisions four dashboards under the `OS2` folder:
 

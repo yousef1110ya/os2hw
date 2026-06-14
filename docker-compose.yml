@@ -164,18 +164,28 @@ services:
     networks:
       - backend
 
-  cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: cadvisor
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
     privileged: true
     ports:
-      - "8082:8080"
+      - "12345:12345"
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
     volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      - /var/run/docker.sock:/var/run/docker.sock
       - /:/rootfs:ro
-      - /var/run:/var/run:ro
+      - /var/run:/var/run:rw
       - /sys:/sys:ro
-      - /var/lib/docker:/var/lib/docker:ro
+      - ${DOCKER_ROOT_DIR:-/var/lib/docker}:/var/lib/docker:ro
       - /dev/disk:/dev/disk:ro
+    depends_on:
+      - prometheus
     networks:
       - backend
     restart: unless-stopped
@@ -203,6 +213,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
       - --web.enable-lifecycle
+      - --web.enable-remote-write-receiver
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
@@ -213,7 +224,6 @@ services:
     depends_on:
       - ai-classifier
       - apache-exporter
-      - cadvisor
     networks:
       - backend
     restart: unless-stopped
@@ -259,6 +269,7 @@ volumes:
   rabbitmq-data:
   prometheus-data:
   grafana-data:
+  alloy-data:
   apache_logs:
 
 networks:
