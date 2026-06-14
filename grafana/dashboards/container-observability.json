@@ -55,8 +55,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "label_replace(sum by (id) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\",cpu=\"total\",id=~\"/docker/[a-f0-9]{64}\"}[5m])), \"container\", \"$1\", \"id\", \"/docker/(.{12}).*\")",
-          "legendFormat": "{{container}}",
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{job=\"cadvisor\",image!=\"\",name!=\"\"}[5m]))",
+          "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
         }
@@ -98,8 +98,8 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "label_replace(container_memory_working_set_bytes{job=\"cadvisor\",id=~\"/docker/[a-f0-9]{64}\"}, \"container\", \"$1\", \"id\", \"/docker/(.{12}).*\")",
-          "legendFormat": "{{container}}",
+          "expr": "sum by (name) (container_memory_working_set_bytes{job=\"cadvisor\",image!=\"\",name!=\"\"})",
+          "legendFormat": "{{name}}",
           "range": true,
           "refId": "A"
         }
